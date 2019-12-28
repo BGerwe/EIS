@@ -118,7 +118,8 @@ def Par_RC_Res(RC, frequencies, Z):
     """
     w = calcw(frequencies)
     Yel = 1/Z
-    S = calcS(Yel - 1 / RC[0] - RC[1] * (1j * w))
+    #print(1/RC[0], RC[1] * (1j * w))
+    S = calcS(Yel - 1 / 10**RC[0] - RC[1] * (1j * w))
     LY = np.sqrt(S)
     return LY
 
@@ -196,6 +197,6 @@ def par_RC_subtract(RC_sub, frequencies, Z):
     """
     w = calcw(frequencies)
     Yel = 1/Z
-    Y_corr = Yel - 1 / RC_sub[0] - 1j * w * RC_sub[1]
+    Y_corr = Yel - 1 / 10**RC_sub[0] - 1j * w * RC_sub[1]
     Z_corr = 1/Y_corr
     return Z_corr
