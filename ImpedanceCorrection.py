@@ -85,31 +85,42 @@ def calcLY(C, frequencies, Z):
 
 def Par_Cap_Res(C, frequencies, Z):
     """Residual function for finding parallel capacitance
-	"""
+    """
     w = calcw(frequencies)
     Yel = 1/Z
     S = calcS(Yel - C * 1j * w)
     LY = np.sqrt(S)
     return LY
 
+
 def Par_CPE_Res(E, frequencies, Z):
     """Residual function for finding parallel constant phase element
-	"""
+    """
     w = calcw(frequencies)
     Yel = 1/Z
     S = calcS(Yel - E[0] * (1j * w)**E[1])
     LY = np.sqrt(S)
     return LY
 
+
+def Par_CPE_Res_log(E, frequencies, Z):
+    """Residual function for finding parallel constant phase element
+    """
+    w = calcw(frequencies)
+    Yel = 1/Z
+    S = calcS(Yel - 10**E[0] * (1j * w)**E[1])
+    LY = np.sqrt(S)
+    return LY
+
+
 def Par_RC_Res(RC, frequencies, Z):
     """Residual function for finding parallel constant phase element
-	"""
+    """
     w = calcw(frequencies)
     Yel = 1/Z
     S = calcS(Yel - 1 / RC[0] - RC[1] * (1j * w))
     LY = np.sqrt(S)
     return LY
-
 
 
 def par_cap_subtract(C_sub, frequencies, Z):
@@ -131,8 +142,35 @@ def par_cap_subtract(C_sub, frequencies, Z):
     Z_corr : np.ndarray
         Impedance data corrected for parallel capacitance
     """
+    w = calcw(frequencies)
     Yel = 1/Z
-    Y_corr = Yel - 1j * calcw(frequencies) * C_sub
+    Y_corr = Yel - 1j * w * C_sub
+    Z_corr = 1/Y_corr
+    return Z_corr
+
+
+def par_CPE_subtract(CPE_sub, frequencies, Z):
+    """Corrects impedance data for parallel capacitance.
+
+    Parameters
+    ----------
+    C_sub : float
+        Value of parallel capacitance subtracted from impedance data
+
+    frequencies : np.ndarray
+        Array of linear frequencies for corresponding impedance data
+
+    Z : np.ndarray
+        Array of impedance data
+
+    Returns
+    -------
+    Z_corr : np.ndarray
+        Impedance data corrected for parallel capacitance
+    """
+    w = calcw(frequencies)
+    Yel = 1/Z
+    Y_corr = Yel - (CPE_sub[0] * (1j * w)**CPE_sub[1])
     Z_corr = 1/Y_corr
     return Z_corr
 
@@ -156,7 +194,8 @@ def par_RC_subtract(RC_sub, frequencies, Z):
     Z_corr : np.ndarray
         Impedance data corrected for parallel capacitance
     """
+    w = calcw(frequencies)
     Yel = 1/Z
-    Y_corr = Yel - 1 / RC_sub[0] - 1j * calcw(frequencies) * RC_sub[1]
+    Y_corr = Yel - 1 / RC_sub[0] - 1j * w * RC_sub[1]
     Z_corr = 1/Y_corr
     return Z_corr
