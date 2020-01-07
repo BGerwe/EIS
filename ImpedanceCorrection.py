@@ -114,13 +114,24 @@ def Par_CPE_Res_log(E, frequencies, Z):
 
 
 def Par_RC_Res(RC, frequencies, Z):
-    """Residual function for finding parallel constant phase element
+    """Residual function for finding parallel RC circuit
     """
     w = calcw(frequencies)
     Yel = 1/Z
     #print(1/RC[0], RC[1] * (1j * w))
-    S = calcS(Yel - 1 / 10**RC[0] - RC[1] * (1j * w))
-    LY = np.sqrt(S)
+    S = calcS(Yel - 1 / RC[0] - RC[1] * (1j * w))
+    LY = np.sqrt(S) #+ np.abs(np.sum(np.imag(Z))) #+ np.sum(np.angle(Yel))
+    return LY
+
+
+def Par_RC_Res_log(RC, frequencies, Z):
+    """Residual function for finding parallel RC circuit
+    """
+    w = calcw(frequencies)
+    Yel = 1/Z
+    #print(1/RC[0], RC[1] * (1j * w))
+    S = calcS(Yel - 1 / 10 ** RC[0] - 10 ** RC[1] * (1j * w))
+    LY = np.sqrt(S) #+ np.sum(np.angle(Yel))
     return LY
 
 
@@ -197,6 +208,32 @@ def par_RC_subtract(RC_sub, frequencies, Z):
     """
     w = calcw(frequencies)
     Yel = 1/Z
-    Y_corr = Yel - 1 / 10**RC_sub[0] - 1j * w * RC_sub[1]
+    Y_corr = Yel - 1 / RC_sub[0] - 1j * w * RC_sub[1]
+    Z_corr = 1/Y_corr
+    return Z_corr
+
+
+def par_RC_subtract_log(RC_sub, frequencies, Z):
+    """Corrects impedance data for parallel capacitance.
+
+    Parameters
+    ----------
+    C_sub : float
+        Value of parallel capacitance subtracted from impedance data
+
+    frequencies : np.ndarray
+        Array of linear frequencies for corresponding impedance data
+
+    Z : np.ndarray
+        Array of impedance data
+
+    Returns
+    -------
+    Z_corr : np.ndarray
+        Impedance data corrected for parallel capacitance
+    """
+    w = calcw(frequencies)
+    Yel = 1/Z
+    Y_corr = Yel - 1 / (10 ** RC_sub[0]) - 1j * w * (10 ** RC_sub[1])
     Z_corr = 1/Y_corr
     return Z_corr
