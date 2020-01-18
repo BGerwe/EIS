@@ -118,9 +118,9 @@ def Par_RC_Res(RC, frequencies, Z):
     """
     w = calcw(frequencies)
     Yel = 1/Z
-    #print(1/RC[0], RC[1] * (1j * w))
+    # print(1/RC[0], RC[1] * (1j * w))
     S = calcS(Yel - 1 / RC[0] - RC[1] * (1j * w))
-    LY = np.sqrt(S) #+ np.abs(np.sum(np.imag(Z))) #+ np.sum(np.angle(Yel))
+    LY = np.sqrt(S)    # + np.abs(np.sum(np.imag(Z))) #+ np.sum(np.angle(Yel))
     return LY
 
 
@@ -129,9 +129,9 @@ def Par_RC_Res_log(RC, frequencies, Z):
     """
     w = calcw(frequencies)
     Yel = 1/Z
-    #print(1/RC[0], RC[1] * (1j * w))
+    # print(1/RC[0], RC[1] * (1j * w))
     S = calcS(Yel - 1 / 10 ** RC[0] - 10 ** RC[1] * (1j * w))
-    LY = np.sqrt(S) #+ np.sum(np.angle(Yel))
+    LY = np.sqrt(S)   # + np.sum(np.angle(Yel))
     return LY
 
 
