@@ -1,4 +1,7 @@
 import numpy as np
+import matplotlib.pyplot as plt
+from impedance.circuit_elements import G
+from impedance.plotting import plot_nyquist
 
 
 def calcS(Y):
@@ -237,3 +240,132 @@ def par_RC_subtract_log(RC_sub, frequencies, Z):
     Y_corr = Yel - 1 / (10 ** RC_sub[0]) - 1j * w * (10 ** RC_sub[1])
     Z_corr = 1/Y_corr
     return Z_corr
+
+
+def par_RCPE_subtract(RCPE_sub, frequencies, Z):
+    """Corrects impedance data for parallel capacitance.
+
+    Parameters
+    ----------
+    C_sub : float
+        Value of parallel capacitance subtracted from impedance data
+
+    frequencies : np.ndarray
+        Array of linear frequencies for corresponding impedance data
+
+    Z : np.ndarray
+        Array of impedance data
+
+    Returns
+    -------
+    Z_corr : np.ndarray
+        Impedance data corrected for parallel capacitance
+    """
+    p = RCPE_sub
+    w = calcw(frequencies)
+    Yel = 1/Z
+    Y_corr = Yel - 1 / (p[0]) - p[1] * (1j * w) ** p[2]
+    Z_corr = 1/Y_corr
+    return Z_corr
+
+
+def sub_Zg_parallel(f, Z, tg, Rg_range, num, show_plot=True):
+
+    Y = 1/Z
+
+    Zgs, Ygs = [], []
+    Z_adjs = []
+    
+    if len(Rg_range) > 1:
+        Rgs = np.logspace(Rg_range[0], Rg_range[1], num=num)
+    else:
+        Rgs = Rg_range
+
+    for Rg in Rgs:
+        Zg = G([Rg, tg], f)
+        Yg = 1 / Zg
+        Zgs.append(Zg)
+        Ygs.append(1/Zg)
+
+    Zgs = np.array(Zgs)
+    Ygs = np.array(Ygs)
+
+    if show_plot is False:
+        for i, Yg in enumerate(Ygs):
+            Y_adj = Y - Yg
+            Z_adj = 1 / Y_adj
+            Z_adjs.append(Z_adj)
+
+        return np.array(Z_adjs)
+ 
+    else:
+        fig, ax = plt.subplots(figsize=(18, 12))
+        fig2, (ax1, ax2) = plt.subplots(nrows=2, figsize=(30, 20))
+        plot_nyquist(ax, f, Z)
+
+        for i, Yg in enumerate(Ygs):
+            Y_adj = Y - Yg
+            Z_adj = 1 / Y_adj
+            Z_adjs.append(Z_adj)
+
+            f_p_idx = np.argmin(np.imag(Z_adj))
+            f_p = f[f_p_idx]
+
+            ax.plot(Z_adj.real, -Z_adj.imag, label='#: %i %.2f Hz' % (i, f_p),
+                    c=(0, i/len(Ygs), .4))
+            ax.plot(Z_adj[f_p_idx].real, -Z_adj[f_p_idx].imag, 's',
+                    c=(0, 0, 0))
+            ax1.plot(np.log10(f), Z_adj.real, label='%.2f' % Rgs[i],
+                     c=(0, i/len(Ygs), .4))
+            ax2.plot(np.log10(f), Z_adj.imag, label='%.2f' % Rgs[i],
+                     c=(0, i/len(Ygs), .4))
+
+        # ax.set_xlim(-80, 300)
+        # ax.set_ylim(-80, 300)
+        ax1.grid(True)
+        ax2.grid(True)
+        ax.legend()
+
+        return np.array(Z_adjs), ax, ax1, ax2
+
+
+def sub_Zg_series(f, Z, tg, Rg_range, num, show_plot=True):
+
+    Zgs = []
+    Z_adjs = []
+
+    Rgs = np.logspace(Rg_range[0], Rg_range[1], num=num)
+
+    for Rg in Rgs:
+        Zg = G([Rg, tg], f)
+        Zgs.append(Zg)
+
+    Zgs = np.array(Zgs)
+
+    fig, ax = plt.subplots(figsize=(18, 12))
+    fig2, (ax1, ax2) = plt.subplots(nrows=2, figsize=(30, 20))
+    plot_nyquist(ax, f, Z)
+
+    for i, Zg in enumerate(Zgs):
+        Z_adj = Z - Zg
+        Z_adjs.append(Z_adj)
+
+        f_p_idx = np.argmin(np.imag(Z_adj))
+        f_p = f[f_p_idx]
+
+        ax.plot(Z_adj.real, -Z_adj.imag, label='%.2f Hz' % f_p,
+                c=(0, i/len(Zgs), .4))
+        ax.plot(Z_adj[f_p_idx].real, -Z_adj[f_p_idx].imag, 's', c=(0, 0, 0))
+        ax1.plot(np.log10(f), Z_adj.real, label='%.2f' % Rgs[i],
+                 c=(0, i/len(Zgs), .4))
+        ax2.plot(np.log10(f), Z_adj.imag, label='%.2f' % Rgs[i],
+                 c=(0, i/len(Zgs), .4))
+
+    # ax.set_xlim(-80, 300)
+    # ax.set_ylim(-80, 300)
+    ax1.grid(True)
+    ax2.grid(True)
+    ax.legend()
+    plt.show()
+
+    return np.array(Z_adjs), ax, ax1, ax2
