@@ -102,8 +102,10 @@ def Par_CPE_Res(E, frequencies, Z):
     w = calcw(frequencies)
     Yel = 1/Z
     S = calcS(Yel - E[0] * (1j * w)**E[1])
+    Z_corr = 1/(Yel - 10**E[0] * (1j * w)**E[1])
+    S2 = sum(n > 0 for n in Z_corr.imag)
     LY = np.sqrt(S)
-    return LY
+    return S + S2
 
 
 def Par_CPE_Res_log(E, frequencies, Z):
@@ -112,8 +114,11 @@ def Par_CPE_Res_log(E, frequencies, Z):
     w = calcw(frequencies)
     Yel = 1/Z
     S = calcS(Yel - 10**E[0] * (1j * w)**E[1])
-    LY = np.sqrt(S)
-    return LY
+    Z_corr = 1/(Yel - 10**E[0] * (1j * w)**E[1])
+    S2 = calcS(Z_corr)
+    S2 = sum(n > 0 for n in Z_corr.imag)
+
+    return S
 
 
 def Par_RC_Res(RC, frequencies, Z):
@@ -122,7 +127,8 @@ def Par_RC_Res(RC, frequencies, Z):
     w = calcw(frequencies)
     Yel = 1/Z
     # print(1/RC[0], RC[1] * (1j * w))
-    S = calcS(Yel - 1 / RC[0] - RC[1] * (1j * w))
+    Y_adj = Yel - 1 / RC[0] - RC[1] * (1j * w)
+    S = calcS(Y_adj)
     LY = np.sqrt(S)    # + np.abs(np.sum(np.imag(Z))) #+ np.sum(np.angle(Yel))
     return LY
 
@@ -133,9 +139,56 @@ def Par_RC_Res_log(RC, frequencies, Z):
     w = calcw(frequencies)
     Yel = 1/Z
     # print(1/RC[0], RC[1] * (1j * w))
-    S = calcS(Yel - 1 / 10 ** RC[0] - 10 ** RC[1] * (1j * w))
+    Y_adj = Yel - 1 / 10 ** RC[0] - 10 ** RC[1] * (1j * w)
+    Z_adj = 1 / Y_adj
+    S = calcS(Y_adj) + np.sum(Z_adj.imag)
     LY = np.sqrt(S)   # + np.sum(np.angle(Yel))
     return LY
+
+
+def Par_RCPE_Res(RCPE, frequencies, Z):
+    """Residual function for finding parallel RC circuit
+    """
+    w = calcw(frequencies)
+    Yel = 1/Z
+    # print(1/RC[0], RC[1] * (1j * w))
+    Y_adj = Yel - 1 / RCPE[0] - RCPE[1] * (1j * w) ** RCPE[2]
+    Z_adj = 1 / Y_adj
+
+    S = calcS(Y_adj) + np.sqrt(np.sum(Z_adj[Z_adj.imag > 0].imag))
+    #LY = np.sqrt(S)   # + np.sum(np.angle(Yel))
+    return S
+
+
+def Par_Zg_Res(p, f, Z, tg):
+    from impedance.circuit_elements import G
+    Y = 1 / Z
+#     p = [Rg[0], tg]
+    try:
+        Rg = p[0]
+    except TypeError:
+        print("Rg passed is not iterable. Using as float")
+        Rg = p
+    Zg = G([Rg, tg], f)
+    Yg = 1 / Zg
+    Y_adj = Y - Yg
+    Z_adj = 1 / Y_adj
+    diffed = np.diff(Z_adj.real)
+    min_ind = np.argmin(Z_adj.imag)
+
+    # dum = np.sqrt((np.angle(Z_adj[0], deg=True) + 90)**2)
+    curv = np.gradient(np.gradient(-Z_adj.imag, Z_adj.real), Z_adj.real)
+
+    xdum = np.zeros(np.shape(curv), dtype=bool)
+    xdum[-10:] = curv[-10:] > 0
+
+    curv_res = sum(curv[xdum])
+    # print('curv_res = ', curv_res*5000, ' Rg = ', Rg)
+    res = 0
+    for n in range(1, len(Z_adj)-min_ind):
+        res += (Z_adj[min_ind+n].imag - Z_adj[min_ind-n].imag)**2
+
+    return res + sum(diffed[diffed < 0]**2)*1000 + curv_res*5000 #  + dum*1000
 
 
 def par_cap_subtract(C_sub, frequencies, Z):
@@ -186,6 +239,32 @@ def par_CPE_subtract(CPE_sub, frequencies, Z):
     w = calcw(frequencies)
     Yel = 1/Z
     Y_corr = Yel - (CPE_sub[0] * (1j * w)**CPE_sub[1])
+    Z_corr = 1/Y_corr
+    return Z_corr
+
+
+def par_CPE_subtract_log(CPE_sub, frequencies, Z):
+    """Corrects impedance data for parallel capacitance.
+
+    Parameters
+    ----------
+    C_sub : float
+        Value of parallel capacitance subtracted from impedance data
+
+    frequencies : np.ndarray
+        Array of linear frequencies for corresponding impedance data
+
+    Z : np.ndarray
+        Array of impedance data
+
+    Returns
+    -------
+    Z_corr : np.ndarray
+        Impedance data corrected for parallel capacitance
+    """
+    w = calcw(frequencies)
+    Yel = 1/Z
+    Y_corr = Yel - (10**CPE_sub[0] * (1j * w)**CPE_sub[1])
     Z_corr = 1/Y_corr
     return Z_corr
 
@@ -311,7 +390,7 @@ def sub_Zg_parallel(f, Z, tg, Rg_range, num, show_plot=True):
             f_p_idx = np.argmin(np.imag(Z_adj))
             f_p = f[f_p_idx]
 
-            ax.plot(Z_adj.real, -Z_adj.imag, label='#: %i %.2f Hz' % (i, f_p),
+            ax.plot(Z_adj.real, -Z_adj.imag, '.-', label='#: %i %.2f Hz' % (i, f_p),
                     c=(0, i/len(Ygs), .4))
             ax.plot(Z_adj[f_p_idx].real, -Z_adj[f_p_idx].imag, 's',
                     c=(0, 0, 0))
@@ -326,7 +405,7 @@ def sub_Zg_parallel(f, Z, tg, Rg_range, num, show_plot=True):
         ax2.grid(True)
         ax.legend()
 
-        return np.array(Z_adjs), ax, ax1, ax2
+        return np.array(Z_adjs), [ax, ax1, ax2]
 
 
 def sub_Zg_series(f, Z, tg, Rg_range, num, show_plot=True):
@@ -368,4 +447,10 @@ def sub_Zg_series(f, Z, tg, Rg_range, num, show_plot=True):
     ax.legend()
     plt.show()
 
-    return np.array(Z_adjs), ax, ax1, ax2
+    return Z_adjs, ax, ax1, ax2
+
+
+def detect_peak_f(f, Z):
+    min_ind = np.argmin(Z.imag)
+    fp = f[min_ind]
+    return fp
