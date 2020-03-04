@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from impedance.circuit_elements import G
+from impedance.models.circuits.elements import G
 from impedance.plotting import plot_nyquist
 
 
@@ -161,7 +161,7 @@ def Par_RCPE_Res(RCPE, frequencies, Z):
 
 
 def Par_Zg_Res(p, f, Z, tg):
-    from impedance.circuit_elements import G
+    from impedance.models.circuits.elements import G
     Y = 1 / Z
 #     p = [Rg[0], tg]
     try:
@@ -380,7 +380,7 @@ def sub_Zg_parallel(f, Z, tg, Rg_range, num, show_plot=True):
     else:
         fig, ax = plt.subplots(figsize=(18, 12))
         fig2, (ax1, ax2) = plt.subplots(nrows=2, figsize=(30, 20))
-        plot_nyquist(ax, f, Z)
+        plot_nyquist(ax, Z)
 
         for i, Yg in enumerate(Ygs):
             Y_adj = Y - Yg
@@ -423,7 +423,7 @@ def sub_Zg_series(f, Z, tg, Rg_range, num, show_plot=True):
 
     fig, ax = plt.subplots(figsize=(18, 12))
     fig2, (ax1, ax2) = plt.subplots(nrows=2, figsize=(30, 20))
-    plot_nyquist(ax, f, Z)
+    plot_nyquist(ax, Z)
 
     for i, Zg in enumerate(Zgs):
         Z_adj = Z - Zg
