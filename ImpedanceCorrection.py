@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from impedance.models.circuits.elements import G
-from impedance.plotting import plot_nyquist
+from impedance.visualization import plot_nyquist
 
 
 def calcS(Y):
@@ -166,29 +166,32 @@ def Par_Zg_Res(p, f, Z, tg):
 #     p = [Rg[0], tg]
     try:
         Rg = p[0]
+        tg = p[1]
     except TypeError:
         print("Rg passed is not iterable. Using as float")
         Rg = p
+    except IndexError:
+        Rg = p[0]
+    
     Zg = G([Rg, tg], f)
     Yg = 1 / Zg
     Y_adj = Y - Yg
     Z_adj = 1 / Y_adj
     diffed = np.diff(Z_adj.real)
     min_ind = np.argmin(Z_adj.imag)
-
-    # dum = np.sqrt((np.angle(Z_adj[0], deg=True) + 90)**2)
+    
+    Z_adj = Z_adj - Z_adj[min_ind].real
     curv = np.gradient(np.gradient(-Z_adj.imag, Z_adj.real), Z_adj.real)
 
     xdum = np.zeros(np.shape(curv), dtype=bool)
     xdum[-10:] = curv[-10:] > 0
-
     curv_res = sum(curv[xdum])
-    # print('curv_res = ', curv_res*5000, ' Rg = ', Rg)
+
     res = 0
     for n in range(1, len(Z_adj)-min_ind):
         res += (Z_adj[min_ind+n].imag - Z_adj[min_ind-n].imag)**2
-
-    return res + sum(diffed[diffed < 0]**2)*1000 + curv_res*5000 #  + dum*1000
+        res += (Z_adj[min_ind+n].real + Z_adj[min_ind-n].real)**2
+    return res #+ sum(diffed[diffed < 0]**2)*1000 + curv_res*5000 #  + dum*1000
 
 
 def par_cap_subtract(C_sub, frequencies, Z):
@@ -380,7 +383,7 @@ def sub_Zg_parallel(f, Z, tg, Rg_range, num, show_plot=True):
     else:
         fig, ax = plt.subplots(figsize=(18, 12))
         fig2, (ax1, ax2) = plt.subplots(nrows=2, figsize=(30, 20))
-        plot_nyquist(ax, Z)
+        plot_nyquist(ax, Z, label='Initial Data')
 
         for i, Yg in enumerate(Ygs):
             Y_adj = Y - Yg
